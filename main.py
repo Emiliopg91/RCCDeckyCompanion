@@ -1,13 +1,16 @@
-import subprocess
 import os
 import json
 import time
 import decky  # eslint: disable=E0401
 from plugin_config import PluginConfig
 from plugin_logger import PluginLogger
+from utils.rcc_websocket import WebsocketServer
 
 
 class Plugin:
+    def __init__(self):
+        self.server = None
+
     # Configuration
 
     async def get_config(self):
@@ -32,12 +35,7 @@ class Plugin:
     async def _main(self):
         PluginLogger.configure_logger()
         decky.logger.info("Running " + decky.DECKY_PLUGIN_NAME)
-        folder_path = decky.DECKY_PLUGIN_RUNTIME_DIR
-        for file_name in os.listdir(folder_path):
-            file_path = os.path.join(folder_path, file_name)
-            # Verificar si es un archivo antes de intentar eliminarlo
-            if os.path.isfile(file_path):
-                os.remove(file_path)
+        self.server = WebsocketServer(18158)
 
     async def _unload(self):
         decky.logger.info("Unloading " + decky.DECKY_PLUGIN_NAME)
@@ -46,36 +44,10 @@ class Plugin:
         decky.logger.info("Migrating plugin configuration")
         PluginConfig.migrate()
 
-    async def dbus_launch_game(self, game_name: str):
-        decky.logger.info(f"Running dbus_launch_game({game_name})")
-        events = [game_name]
+    async def emit_event(self, name: str, *args: any):
+        decky.logger.info(f"Running emit_event({name},{tuple(args)})")
+        self.server.emit(name, *args)
 
-        # Convertir a JSON
-        json_data = json.dumps(events, indent=4)
-
-        # Generar el nombre del archivo con el timestamp actual
-        timestamp = int(time.time())
-        file_name = os.path.join(
-            decky.DECKY_PLUGIN_RUNTIME_DIR, f"launch-{timestamp}.event"
-        )
-
-        # Escribir el JSON en el archivo
-        with open(file_name, "w") as file:
-            file.write(json_data)
-
-    async def dbus_stop_game(self, game_name: str):
-        decky.logger.info(f"Running dbus_stop_game({game_name})")
-        events = [game_name]
-
-        # Convertir a JSON
-        json_data = json.dumps(events, indent=4)
-
-        # Generar el nombre del archivo con el timestamp actual
-        timestamp = int(time.time())
-        file_name = os.path.join(
-            decky.DECKY_PLUGIN_RUNTIME_DIR, f"stop-{timestamp}.event"
-        )
-
-        # Escribir el JSON en el archivo
-        with open(file_name, "w") as file:
-            file.write(json_data)
+    async def send_response(self, id: str, method: str, *args: any):
+        decky.logger.info(f'Running send_response("{id}","{method}",{tuple(args)})')
+        self.server.send_response(id, method, *args)
