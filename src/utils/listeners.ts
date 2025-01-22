@@ -32,10 +32,6 @@ export class Listeners {
       });
     }).unsubscribe;
 
-    Listeners.unsubscribeIncommingRequest = Backend.backend_handle('ping', (id: string) => {
-      BackendUtils.sendResponse(id, 'ping', true);
-    });
-
     Listeners.unsubscribeIncommingRequest = Backend.backend_handle(
       'get_running_games',
       (id: string) => {

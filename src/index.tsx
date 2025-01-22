@@ -6,10 +6,9 @@ import { Framework, FrameworkCfg } from 'decky-plugin-framework';
 import translations from '../assets/translations.i18n.json';
 import { RogIcon } from './components/icons/rogIcon';
 import { MainMenu } from './pages/MainMenu';
+import { BackendUtils } from './utils/backend';
 import { Constants } from './utils/constants';
 import { Listeners } from './utils/listeners';
-
-let websocket: WebSocketClient | undefined = undefined;
 
 export default definePlugin(() => {
   (async (): Promise<void> => {
@@ -34,6 +33,8 @@ export default definePlugin(() => {
     );
 
     Listeners.bind();
+
+    BackendUtils.ready();
   })();
 
   return {

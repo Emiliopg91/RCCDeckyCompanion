@@ -35,7 +35,6 @@ class Plugin:
     async def _main(self):
         PluginLogger.configure_logger()
         decky.logger.info("Running " + decky.DECKY_PLUGIN_NAME)
-        self.server = WebsocketServer(18158)
 
     async def _unload(self):
         decky.logger.info("Unloading " + decky.DECKY_PLUGIN_NAME)
@@ -51,3 +50,7 @@ class Plugin:
     async def send_response(self, id: str, method: str, *args: any):
         decky.logger.info(f'Running send_response("{id}","{method}",{tuple(args)})')
         self.server.send_response(id, method, *args)
+
+    async def ready(self):
+        decky.logger.info(f"Running ready()")
+        self.server = WebsocketServer(18158)

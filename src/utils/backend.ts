@@ -45,4 +45,8 @@ export class BackendUtils {
       ...args
     );
   }
+
+  public static async ready(): Promise<string | null> {
+    return Backend.backend_call<[], string>('ready');
+  }
 }
