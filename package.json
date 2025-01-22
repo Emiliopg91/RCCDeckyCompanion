@@ -1,6 +1,6 @@
 {
   "name": "rcc-decky-companion",
-  "version": "1.0.1-dev",
+  "version": "1.1.0",
   "description": "Rog laptop Decky plugin companion",
   "type": "module",
   "scripts": {
@@ -25,11 +25,11 @@
   },
   "homepage": "https://github.com//Emiliopg91/AllyDeckyCompanion#readme",
   "devDependencies": {
-    "@electron-toolkit/eslint-config-prettier": "^2.0.0",
-    "@electron-toolkit/eslint-config-ts": "^2.0.0",
     "@decky/api": "^1.1.2",
     "@decky/rollup": "^1.0.1",
     "@decky/ui": "^4.7.2",
+    "@electron-toolkit/eslint-config-prettier": "^2.0.0",
+    "@electron-toolkit/eslint-config-ts": "^2.0.0",
     "@rollup/plugin-commonjs": "^21.1.0",
     "@rollup/plugin-json": "^4.1.0",
     "@rollup/plugin-node-resolve": "^13.3.0",
@@ -41,6 +41,7 @@
     "@types/react": "18.3.3",
     "@types/react-dom": "18.3.0",
     "@types/webpack": "^5.28.5",
+    "@types/ws": "^8.5.13",
     "decky-plugin-framework": "^1.4.4",
     "eslint": "8.57.1",
     "eslint-plugin-react": "^7.34.3",
@@ -54,7 +55,8 @@
   "dependencies": {
     "async-mutex": "^0.5.0",
     "lodash": "^4.17.21",
-    "react-icons": "^4.12.0"
+    "react-icons": "^4.12.0",
+    "ws": "^8.18.0"
   },
   "pnpm": {
     "peerDependencyRules": {
