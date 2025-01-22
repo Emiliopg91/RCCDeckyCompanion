@@ -1,6 +1,6 @@
 {
   "name": "rcc-decky-companion",
-  "version": "1.1.2-dev",
+  "version": "1.1.2",
   "description": "Rog laptop Decky plugin companion",
   "type": "module",
   "scripts": {
