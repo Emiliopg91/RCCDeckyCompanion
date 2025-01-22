@@ -73,7 +73,7 @@ importers:
         specifier: ^8.5.13
         version: 8.5.13
       decky-plugin-framework:
-        specifier: ^1.4.4
+        specifier: ^1.4.8
         version: 1.4.8(react@19.0.0)
       eslint:
         specifier: 8.57.1
