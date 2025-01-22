@@ -9,6 +9,8 @@ import { MainMenu } from './pages/MainMenu';
 import { Constants } from './utils/constants';
 import { Listeners } from './utils/listeners';
 
+let websocket: WebSocketClient | undefined = undefined;
+
 export default definePlugin(() => {
   (async (): Promise<void> => {
     const frameworkConfiguration: FrameworkCfg = {

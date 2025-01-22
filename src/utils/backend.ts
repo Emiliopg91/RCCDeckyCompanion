@@ -25,11 +25,24 @@ export class BackendUtils {
     return Backend.backend_call<[], string>('get_plugin_name');
   }
 
-  public static async dbusStopGame(game_name: string): Promise<string | null> {
-    return Backend.backend_call<[game_name: string], string>('dbus_stop_game', game_name);
+  public static async sendResponse(
+    id: string,
+    method: string,
+    ...args: any[]
+  ): Promise<string | null> {
+    return Backend.backend_call<[id: string, method: string, ...params: any[]], string>(
+      'send_response',
+      id,
+      method,
+      ...args
+    );
   }
 
-  public static async dbusLaunchGame(game_name: string): Promise<string | null> {
-    return Backend.backend_call<[game_name: string], string>('dbus_launch_game', game_name);
+  public static async emitEvent(event: string, ...args: any[]): Promise<string | null> {
+    return Backend.backend_call<[event: string, ...params: any[]], string>(
+      'emit_event',
+      event,
+      ...args
+    );
   }
 }
