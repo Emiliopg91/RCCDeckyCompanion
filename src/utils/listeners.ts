@@ -24,7 +24,12 @@ export class Listeners {
       event.getDetails().then((game) => {
         if (event.isRunning()) {
           Listeners.runningApplications.push({ id: game.getGameId(), name: game.getDisplayName() });
-          BackendUtils.emitEvent('launch_game', game.getGameId(), game.getDisplayName());
+          BackendUtils.emitEvent(
+            'launch_game',
+            game.getGameId(),
+            game.getDisplayName(),
+            event.getPID()
+          );
         } else {
           Listeners.runningApplications = Listeners.runningApplications.filter(
             (e) => e.id != game.getGameId()

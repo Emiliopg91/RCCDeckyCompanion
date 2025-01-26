@@ -2,6 +2,7 @@ import decky
 from plugin_config import PluginConfig
 import logging
 
+
 class PluginLogger:
     @staticmethod
     def log(level: str, msg: str) -> int:
@@ -35,7 +36,7 @@ class PluginLogger:
         """
         log: str = ""
         for line in reversed(list(open(decky.DECKY_LOG))):
-            log = line + '\n' + log  
+            log = line + "\n" + log
             if "Logger initialized at level" in line.strip():
                 break
         return log
@@ -43,10 +44,9 @@ class PluginLogger:
     @staticmethod
     def configure_logger():
         formatter = logging.Formatter(
-            fmt='[%(asctime)s,%(msecs)03d][%(levelname)s]%(message)s',
-            datefmt='%Y-%m-%d %H:%M:%S'
+            fmt="[%(asctime)s,%(msecs)03d][%(levelname)s]%(message)s", datefmt="%Y-%m-%d %H:%M:%S"
         )
-        logger_level=PluginConfig.get_config_item("log_level", "INFO")
+        logger_level = PluginConfig.get_config_item("log_level", "INFO")
         decky.logger.setLevel(logger_level)
         for h in decky.logger.handlers:
             h.setFormatter(formatter)

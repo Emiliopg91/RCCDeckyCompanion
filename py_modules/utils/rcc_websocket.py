@@ -38,15 +38,11 @@ class WebsocketServer(ABC):
         # Inicia el hilo para escuchar conexiones del servidor
         Thread(
             daemon=True,
-            target=lambda: asyncio.new_event_loop().run_until_complete(
-                self.__start_server()
-            ),
+            target=lambda: asyncio.new_event_loop().run_until_complete(self.__start_server()),
         ).start()
         Thread(
             daemon=True,
-            target=lambda: asyncio.new_event_loop().run_until_complete(
-                self._message_sender()
-            ),
+            target=lambda: asyncio.new_event_loop().run_until_complete(self._message_sender()),
         ).start()
 
     async def __start_server(self):
@@ -68,9 +64,7 @@ class WebsocketServer(ABC):
 
     async def _message_sender(self):
         while True:
-            message = self._message_queue.get(
-                block=True
-            )  # Espera hasta que haya un mensaje
+            message = self._message_queue.get(block=True)  # Espera hasta que haya un mensaje
 
             if self._server:
                 for websocket in self._server.websockets:
@@ -78,9 +72,7 @@ class WebsocketServer(ABC):
                         await websocket.send(message)
                         decky.logger.info(f"Sent message: {message}")
                     except ConnectionClosedError:
-                        decky.logger.info(
-                            f"Failed to send message to {websocket.remote_address}, client disconnected."
-                        )
+                        decky.logger.info(f"Failed to send message to {websocket.remote_address}, client disconnected.")
             else:
                 decky.logger.info("No server running, message not sent.")
 
@@ -102,9 +94,7 @@ class WebsocketServer(ABC):
             decky.logger.info(f"Client disconnected: {websocket.remote_address}")
 
     async def _handle_message(self, input_msg, websocket):
-        decky.logger.info(
-            f"Received message from {websocket.remote_address}: '{input_msg}'"
-        )
+        decky.logger.info(f"Received message from {websocket.remote_address}: '{input_msg}'")
         message: MessageType = None
         try:
             message = MessageType.from_json(input_msg)  # pylint: disable=E1101

@@ -7,6 +7,7 @@ import shutil
 from pathlib import Path
 from jobs.utils import Utils
 
+
 class Setup:
     def __init__(self):
         # Obtiene la ruta del archivo desde la clase Utils
@@ -22,8 +23,8 @@ class Setup:
         if not os.path.exists(Utils.id_rsa_file) or not os.path.exists(self.settings_path):
             print("Setting up project for deployment")
             if not os.path.exists(self.settings_path):
-                self._create_settings() 
-            if not os.path.exists(Utils.id_rsa_file):       
+                self._create_settings()
+            if not os.path.exists(Utils.id_rsa_file):
                 self.generate_id_rsa()
             print("Setup finished")
 
@@ -41,7 +42,7 @@ class Setup:
                 break
             else:
                 print("      Invalid port, try again")
-        
+
         while True:
             user = input("    Deck's user (default 'deck'): ") or "deck"
             if len(user) > 0:
@@ -55,7 +56,6 @@ class Setup:
                 break
             else:
                 print("      Invalid port, try again")
-        
 
         config_data = {
             "deckip": ip,
@@ -64,24 +64,29 @@ class Setup:
             "deckcefport": cefPort,
         }
 
-        with open(self.settings_path, 'w') as file:
+        with open(self.settings_path, "w") as file:
             json.dump(config_data, file, indent=4)
 
     def generate_id_rsa(self):
         try:
             print("  Generating RSA key for SSH")
             Utils.run_command(["ssh-keygen", "-t", "rsa", "-f", Utils.id_rsa_file], True, self.log_key_copy)
-            print("    SSH key generated. Ensure appending local '" + Utils.id_rsa_file + ".pub' to Deck's '~/.ssh/authorized_keys'")
+            print(
+                "    SSH key generated. Ensure appending local '"
+                + Utils.id_rsa_file
+                + ".pub' to Deck's '~/.ssh/authorized_keys'"
+            )
             exit(0)
         except Exception as e:
             Utils.handle_error(e, self.log_key_copy)
             os.remove(Utils.id_rsa_file)
-            os.remove(Utils.id_rsa_file + ".pub")    
+            os.remove(Utils.id_rsa_file + ".pub")
 
     @staticmethod
     def is_valid_ip(ip):
-        ip_pattern = re.compile(r"^(25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])"
-                                r"(\.(25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])){3}$")
+        ip_pattern = re.compile(
+            r"^(25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])" r"(\.(25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])){3}$"
+        )
         return ip_pattern.match(ip) is not None
 
     @staticmethod

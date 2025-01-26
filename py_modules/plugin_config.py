@@ -3,6 +3,7 @@ from pathlib import Path
 import decky
 import json
 
+
 class PluginConfig:
     # Plugin directories and files
     plugin_dir = Path(decky.DECKY_PLUGIN_DIR)
@@ -27,7 +28,7 @@ class PluginConfig:
         return value
 
     @staticmethod
-    def flatten_json(nested_json, parent_key=''):
+    def flatten_json(nested_json, parent_key=""):
         """
         Aplana un JSON jerárquico.
 
@@ -40,7 +41,7 @@ class PluginConfig:
         """
         items = {}
         for key, value in nested_json.items():
-            new_key = parent_key + '.' + key if parent_key else key
+            new_key = parent_key + "." + key if parent_key else key
             if isinstance(value, dict):
                 # Recursión si el valor es otro diccionario
                 items.update(PluginConfig.flatten_json(value, new_key))
@@ -49,7 +50,7 @@ class PluginConfig:
         return items
 
     @staticmethod
-    def get_config(): 
+    def get_config():
         """
         Reads and parses the plugin configuration file.
 
@@ -63,12 +64,12 @@ class PluginConfig:
         flat_config = {}
 
         # Función inline para recorrer el JSON recursivamente y aplanarlo
-        stack = [(config_data, '')]  # Pila con el JSON inicial y la clave vacía
+        stack = [(config_data, "")]  # Pila con el JSON inicial y la clave vacía
         while stack:
             current, parent_key = stack.pop()
 
             for key, value in current.items():
-                new_key = parent_key + '.' + key if parent_key else key
+                new_key = parent_key + "." + key if parent_key else key
 
                 if isinstance(value, dict):
                     # Si el valor es otro diccionario, lo añadimos a la pila para seguir recorriendo
@@ -91,15 +92,15 @@ class PluginConfig:
         value = PluginConfig.convert_value(value)
         with open(PluginConfig.cfg_property_file, "r+") as jsonFile:
             data = json.load(jsonFile)
-            
+
             keys = key.split(".")
             d = data
-            
+
             for k in keys[:-1]:
                 if k not in d:
                     d[k] = {}
                 d = d[k]
-            
+
             d[keys[-1]] = value
 
             jsonFile.seek(0)
@@ -120,22 +121,22 @@ class PluginConfig:
         """
         with open(PluginConfig.cfg_property_file, "r") as jsonFile:
             data = json.load(jsonFile)
-            
+
             keys = name.split(".")
             d = data
-            
+
             for k in keys:
                 if k in d:
                     d = d[k]
                 else:
                     return default
-            
+
             return d
 
     @staticmethod
     def correct_types(file_path: str) -> None:
         # Leer el archivo JSON
-        with open(file_path, 'r', encoding='utf-8') as file:
+        with open(file_path, "r", encoding="utf-8") as file:
             data = json.load(file)
 
         def recursive_migrate(item):
@@ -146,12 +147,12 @@ class PluginConfig:
             elif isinstance(item, list):
                 for index, value in enumerate(item):
                     item[index] = recursive_migrate(PluginConfig.convert_value(value))
-            
+
             return item
 
         corrected_data = recursive_migrate(data)
 
-        with open(file_path, 'w', encoding='utf-8') as file:
+        with open(file_path, "w", encoding="utf-8") as file:
             json.dump(corrected_data, file, indent=4, ensure_ascii=False)
 
     @staticmethod
@@ -163,9 +164,7 @@ class PluginConfig:
             os.makedirs(PluginConfig.config_dir, exist_ok=True)
         if not PluginConfig.cfg_property_file.is_file():
             PluginConfig.cfg_property_file.touch()
-            dictionary = {
-                "log_level": "INFO"
-            }
+            dictionary = {"log_level": "INFO"}
             json_object = json.dumps(dictionary, indent=4)
             with open(PluginConfig.cfg_property_file, "w") as outfile:
                 outfile.write(json_object)
