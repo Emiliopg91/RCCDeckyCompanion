@@ -49,4 +49,8 @@ export class BackendUtils {
   public static async ready(): Promise<string | null> {
     return Backend.backend_call<[], string>('ready');
   }
+
+  public static async shutdown(): Promise<string | null> {
+    return Backend.backend_call<[], string>('shutdown');
+  }
 }

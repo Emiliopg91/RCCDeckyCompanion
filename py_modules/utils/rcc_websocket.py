@@ -113,7 +113,16 @@ class WebsocketServer(ABC):
             decky.logger.error(f"Error on message parsing: {e}")
 
         if message is not None and message.type == "REQUEST":
-            await decky.emit(message.name, message.id, *message.data)
+            if message.name not in (
+                "get_running_games",
+                "get_apps_details",
+                "set_launch_options",
+            ):
+                message.type = "RESPONSE"
+                message.error = f"No such method '{message.name}'"
+                self.send_message(message.to_json())  # pylint: disable=E1101
+            else:
+                await decky.emit(message.name, message.id, *message.data)
 
     def emit(self, event: str, *data: any):
         """Emit event with specified data"""
@@ -123,3 +132,6 @@ class WebsocketServer(ABC):
     def send_response(self, msg_id: str, method: str, *data: any):
         msg = MessageType("RESPONSE", method, list(data), None, msg_id)
         self.send_message(msg.to_json())  # pylint: disable=E1101
+
+    def shutdown(self):
+        self._server.close()

@@ -34,6 +34,9 @@ export default definePlugin(() => {
 
     Listeners.bind();
 
+    const reg = SteamClient.User.RegisterForShutdownStart(async () => {
+      BackendUtils.shutdown();
+    });
     BackendUtils.ready();
   })();
 

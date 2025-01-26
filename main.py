@@ -54,3 +54,7 @@ class Plugin:
     async def ready(self):
         decky.logger.info(f"Running ready()")
         self.server = WebsocketServer(18158)
+
+    async def shutdown(self):
+        decky.logger.info(f"Running shutdown()")
+        self.server.shutdown()
