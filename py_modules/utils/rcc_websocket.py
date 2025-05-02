@@ -34,6 +34,7 @@ class WebsocketServer(ABC):
         self._port = port
         self._server = None
         self._message_queue = queue.Queue()
+        self._active_websockets = set()
 
         # Inicia el hilo para escuchar conexiones del servidor
         Thread(
@@ -49,10 +50,14 @@ class WebsocketServer(ABC):
         """Iniciar el servidor WebSocket."""
         uri = f"ws://{self.HOST}:{self._port}"
 
-        async def handle_client(websocket, _):
-            """Maneja las conexiones entrantes."""
+        async def handle_client(websocket):
+            self._active_websockets.add(websocket)
             decky.logger.info(f"New client connected: {websocket.remote_address}")
-            await self._handler(websocket)
+            try:
+                await self._handler(websocket)
+            finally:
+                self._active_websockets.remove(websocket)
+                decky.logger.info(f"Client disconnected: {websocket.remote_address}")
 
         try:
             self._server = await websockets.serve(handle_client, self.HOST, self._port)
@@ -64,15 +69,21 @@ class WebsocketServer(ABC):
 
     async def _message_sender(self):
         while True:
+            decky.logger.info("Waiting for outgoing messages...")
             message = self._message_queue.get(block=True)  # Espera hasta que haya un mensaje
+            decky.logger.info(f"Preparing to send {message}")
 
             if self._server:
-                for websocket in self._server.websockets:
-                    try:
-                        await websocket.send(message)
-                        decky.logger.info(f"Sent message: {message}")
-                    except ConnectionClosedError:
-                        decky.logger.info(f"Failed to send message to {websocket.remote_address}, client disconnected.")
+                if self._active_websockets:
+                    for websocket in list(self._active_websockets):
+                        try:
+                            await websocket.send(message)
+                            decky.logger.info(f"Sent message: {message}")
+                        except ConnectionClosedError:
+                            decky.logger.info(
+                                f"Failed to send message to {websocket.remote_address}, client disconnected."
+                            )
+                decky.logger.info(f"Sent to {len(self._active_websockets)} clients")
             else:
                 decky.logger.info("No server running, message not sent.")
 
