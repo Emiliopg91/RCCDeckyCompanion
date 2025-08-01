@@ -118,6 +118,7 @@ class WebsocketServer(ABC):
                 "get_running_games",
                 "get_apps_details",
                 "set_launch_options",
+                "get_icon",
             ):
                 message.type = "RESPONSE"
                 message.error = f"No such method '{message.name}'"

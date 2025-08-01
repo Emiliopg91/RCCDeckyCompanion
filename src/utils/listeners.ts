@@ -7,6 +7,7 @@ import {
   Logger
 } from 'decky-plugin-framework';
 
+import { Router } from '@decky/ui';
 import { BackendUtils } from './backend';
 
 export class Listeners {
@@ -14,6 +15,7 @@ export class Listeners {
   private static unsubscribeIncommingRequest: (() => void) | undefined = undefined;
   private static unsubscribeGetAppsDetails: (() => void) | undefined = undefined;
   private static unsubscribeSetLaunchOptions: (() => void) | undefined = undefined;
+  private static unsubscribeGetIcon: (() => void) | undefined = undefined;
 
   public static runningApplications: Array<{ id: number; name: string }> = [];
 
@@ -23,6 +25,13 @@ export class Listeners {
       Logger.info('New game event:', event);
       event.getDetails().then((game) => {
         if (event.isRunning()) {
+          Router.RunningApps.forEach((app: any) => {
+            if (app.appid == game.getGameId()) {
+              const appDet = appStore.GetAppOverviewByGameID(app.appid);
+              localStorage.setItem("icon-url-" + app.appid, appStore.GetIconURLForApp(appDet))
+            }
+          });
+
           Listeners.runningApplications.push({ id: game.getGameId(), name: game.getDisplayName() });
           BackendUtils.emitEvent(
             'launch_game',
@@ -64,6 +73,13 @@ export class Listeners {
       }
     );
 
+    Listeners.unsubscribeGetIcon = Backend.backend_handle(
+      'get_icon',
+      async (id: string, appId: number[]) => {
+        BackendUtils.sendResponse(id, 'get_icon', localStorage.getItem("icon-url-" + appId) ?? "");
+      }
+    );
+
     Listeners.unsubscribeSetLaunchOptions = Backend.backend_handle(
       'set_launch_options',
       async (id: string, appid: number, launch_opts: string) => {
@@ -85,6 +101,9 @@ export class Listeners {
     }
     if (Listeners.unsubscribeSetLaunchOptions) {
       Listeners.unsubscribeSetLaunchOptions();
+    }
+    if (Listeners.unsubscribeGetIcon) {
+      Listeners.unsubscribeGetIcon()
     }
   }
 }
