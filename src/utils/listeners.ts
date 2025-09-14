@@ -65,7 +65,9 @@ export class Listeners {
             appid: data[i],
             name: details.strDisplayName,
             launch_opts: details.strLaunchOptions,
-            is_steam_app: appStore.GetAppOverviewByGameID(data[i]).rt_steam_release_date > 0
+            is_steam_app: appStore.GetAppOverviewByGameID(data[i]).rt_steam_release_date > 0,
+            compat_tool: details.strCompatToolName,
+            is_shortcut: details.strShortcutExe !== undefined
           };
         }
         BackendUtils.sendResponse(id, 'get_apps_details', response);
