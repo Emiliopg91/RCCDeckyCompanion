@@ -8,8 +8,20 @@ import socket
 
 from abc import ABC
 from threading import Thread, Lock
+from dataclasses import dataclass, field
+from dataclasses_json import dataclass_json
+import uuid
 
-from .rcc_websocket import MessageType
+@dataclass_json
+@dataclass
+class MessageType:
+    """Data class for message"""
+
+    type: str
+    name: str
+    data: list[any] | None = field(default_factory=list)
+    error: str | None = None
+    id: str = field(default_factory=lambda: str(uuid.uuid4()))
 
 
 class UnixSocketServer(ABC):
@@ -31,12 +43,16 @@ class UnixSocketServer(ABC):
 
         Thread(
             daemon=True,
-            target=lambda: self.loop.run_until_complete(self.__start_server()),
+            target=lambda: self.loop.run_forever(),
         ).start()
+
+        asyncio.run_coroutine_threadsafe(self.__start_server(), self.loop)
+
         Thread(
             daemon=True,
-            target=lambda: self.loop.run_until_complete(self._message_sender()),
+            target=self._message_sender,
         ).start()
+
 
     async def __start_server(self):
         if os.path.exists(UnixSocketServer.SOCKET):
@@ -44,6 +60,7 @@ class UnixSocketServer(ABC):
 
         self._server = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
         self._server.bind(UnixSocketServer.SOCKET)
+        os.chmod(UnixSocketServer.SOCKET, 0o666)
         self._server.listen(1)
         self.running = True
 
@@ -63,25 +80,22 @@ class UnixSocketServer(ABC):
                     decky.logger.warning("[SERVER] Extra connection rejected")
                     client_sock.close()
 
-    async def _message_sender(self):
+    def _message_sender(self):
         while True:
             decky.logger.info("Waiting for outgoing messages...")
             message = self._message_queue.get(block=True)
             decky.logger.info(f"Preparing to send {message}")
 
-            if self._server:
-                if self._client:
-                    try:
-                        data = json.dumps(message).encode("utf-8")
-                        header = len(data).to_bytes(4, byteorder="big")
-                        self._client.sendall(header + data)
-                        decky.logger.info(f"Sent to client")
-                    except Exception as e:
-                        decky.logger.error(
-                            f"Failed to send message to client: {e}"
-                        )
+            if self._server and self._client:
+                try:
+                    data = message.to_json().encode("utf-8")
+                    header = len(data).to_bytes(4, byteorder="big")
+                    self._client.sendall(header + data)
+                    decky.logger.info("Sent to client")
+                except Exception as e:
+                    decky.logger.error(f"Failed to send message to client: {e}")
             else:
-                decky.logger.info("No server running, message not sent.")
+                decky.logger.info("No server/client running, message not sent.")
 
     def _add_message_to_queue(self, message):
         self._message_queue.put(message)
@@ -123,17 +137,21 @@ class UnixSocketServer(ABC):
             decky.logger.error(f"Error on message parsing: {e}")
 
         if message is not None and message.type == "REQUEST":
-            if message.name not in (
-                "get_running_games",
-                "get_apps_details",
-                "set_launch_options",
-                "get_icon",
-            ):
-                message.type = "RESPONSE"
-                message.error = f"No such method '{message.name}'"
-                self.send_message(message)  # pylint: disable=E1101
+            if message.name=="ping":
+                response = MessageType("RESPONSE","ping",["pong"],None, message.id)
+                self.send_message(response)
             else:
-                await decky.emit(message.name, message.id, *message.data)
+                if message.name not in (
+                    "get_running_games",
+                    "get_apps_details",
+                    "set_launch_options",
+                    "get_icon",
+                ):
+                    message.type = "RESPONSE"
+                    message.error = f"No such method '{message.name}'"
+                    self.send_message(message)  # pylint: disable=E1101
+                else:
+                    await decky.emit(message.name, message.id, *message.data)
 
     def emit(self, event: str, *data: any):
         """Emit event with specified data"""
@@ -146,10 +164,25 @@ class UnixSocketServer(ABC):
 
     def shutdown(self):
         self.running = False
-        if self._client:
-            self._client.close()
-        if self._server:
-            self._server.close()
+        with self.lock:
+            if self._client is not None:
+                try:
+                    self._client.close()
+                except Exception as e:
+                    decky.logger.error(f"Error closing client: {e}")
+                self._client = None
+
+            if self._server is not None:
+                try:
+                    self._server.close()
+                except Exception as e:
+                    decky.logger.error(f"Error closing server: {e}")
+                self._server = None
+
         if os.path.exists(self.SOCKET):
-            os.remove(self.SOCKET)
+            try:
+                os.remove(self.SOCKET)
+            except Exception as e:
+                decky.logger.error(f"Error removing socket file: {e}")
+
         decky.logger.info("[SERVER] Stopped")

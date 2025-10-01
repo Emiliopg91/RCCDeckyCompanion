@@ -4,13 +4,11 @@ import time
 import decky  # eslint: disable=E0401
 from plugin_config import PluginConfig
 from plugin_logger import PluginLogger
-from utils.rcc_websocket import WebsocketServer
 from utils.rcc_unix_socket import UnixSocketServer
 
 
 class Plugin:
     def __init__(self):
-        self.server = None
         self.socket_server = None
 
     # Configuration
@@ -47,20 +45,16 @@ class Plugin:
 
     async def emit_event(self, name: str, *args: any):
         decky.logger.info(f"Running emit_event({name},{tuple(args)})")
-        self.server.emit(name, *args)
         self.socket_server.emit(name, *args)
 
     async def send_response(self, id: str, method: str, *args: any):
         decky.logger.info(f'Running send_response("{id}","{method}",{tuple(args)})')
-        self.server.send_response(id, method, *args)
         self.socket_server.send_response(id, method, *args)
 
     async def ready(self):
         decky.logger.info(f"Running ready()")
-        self.server = WebsocketServer(18158)
         self.socket_server = UnixSocketServer()
 
     async def shutdown(self):
         decky.logger.info(f"Running shutdown()")
-        self.server.shutdown()
         self.socket_server.shutdown()
