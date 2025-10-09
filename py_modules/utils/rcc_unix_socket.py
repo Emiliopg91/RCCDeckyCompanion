@@ -3,25 +3,33 @@ import decky
 import asyncio
 import queue
 import os
-import json
+import yaml
 import socket
 
 from abc import ABC
 from threading import Thread, Lock
-from dataclasses import dataclass, field
-from dataclasses_json import dataclass_json
+from dataclasses import dataclass, field, asdict
 import uuid
 
-@dataclass_json
 @dataclass
 class MessageType:
-    """Data class for message"""
+    """Data class for YAML message"""
 
     type: str
     name: str
-    data: list[any] | None = field(default_factory=list)
+    data: list[any] = field(default_factory=list)
     error: str | None = None
     id: str = field(default_factory=lambda: str(uuid.uuid4()))
+
+    def to_yaml(self) -> str:
+        """Serialize the dataclass to a YAML string"""
+        return yaml.safe_dump(asdict(self), sort_keys=False)
+
+    @staticmethod
+    def from_yaml(yaml_str: str) -> "MessageType":
+        """Deserialize from YAML string"""
+        data = yaml.safe_load(yaml_str)
+        return MessageType(**data)
 
 
 class UnixSocketServer(ABC):
@@ -88,7 +96,7 @@ class UnixSocketServer(ABC):
 
             if self._server and self._client:
                 try:
-                    data = message.to_json().encode("utf-8")
+                    data = message.to_yaml().encode("utf-8")
                     header = len(data).to_bytes(4, byteorder="big")
                     self._client.sendall(header + data)
                     decky.logger.info("Sent to client")
@@ -113,7 +121,7 @@ class UnixSocketServer(ABC):
                 msg_len = int.from_bytes(header, byteorder="big")
                 data = sock.recv(msg_len).decode("utf-8")
 
-                msg = json.loads(data)
+                msg = MessageType.from_yaml(data)
                 decky.logger.info(f"[SERVER] Received: {msg}")
 
                 # Responder si es request
@@ -131,7 +139,7 @@ class UnixSocketServer(ABC):
         decky.logger.info(f"Received message: '{input_msg}'")
         message: MessageType = None
         try:
-            message = MessageType.from_json(input_msg)
+            message = MessageType.from_yaml(input_msg)
         except Exception as e:
             message = None
             decky.logger.error(f"Error on message parsing: {e}")
