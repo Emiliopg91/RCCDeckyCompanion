@@ -18,18 +18,40 @@ class Utils:
         exit(1)
 
     @staticmethod
-    def run_command(command, check, log_file):
-        with open(log_file, "a") as f:
-            try:
-                f.write("########################################################################\n")
-                f.write(" ".join(command) + "\n\n\n")
+    def run_command(command, check, log_file, password=None):
+        try:
+            cmd_str = "    " + (" ".join(command))
+            if password is not None:
+                cmd_str = cmd_str.replace(password, "*" * len(password))
+            print(cmd_str, flush=True)
+
+            with open(log_file, "a") as f:
+                f.write("#" * 72 + "\n")
+                f.write(" ".join(command) + "\n\n")
+
+                process = subprocess.Popen(
+                    command,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.STDOUT,
+                    text=True,
+                    bufsize=1,
+                )
+
+                # leer línea por línea
+                for line in process.stdout:
+                    print("      " + line, end="", flush=True)  # mostrar por consola
+                    f.write(line)  # escribir en log
+
+                process.wait()
+
+                f.write(f"\n\nReturn code: {process.returncode}\n")
+                f.write("#" * 72 + "\n\n")
                 f.flush()
-                result = subprocess.run(command, stderr=f, stdout=f)
-                f.write("\n\nReturn code: " + str(result.returncode) + "\n")
-                f.flush()
-                if check and result.returncode != 0:
-                    raise Exception("Unexpected error code " + str(result.returncode))
-                f.write("########################################################################")
-                f.flush()
-            except Exception as e:
-                Utils.handle_error(e, log_file)
+
+                print(f"    Return code: {process.returncode}", flush=True)
+
+                if check and process.returncode != 0:
+                    raise Exception(f"Unexpected error code {process.returncode}")
+
+        except Exception as e:
+            Utils.handle_error(e, log_file)
