@@ -25,13 +25,6 @@ export class Listeners {
       Logger.info('New game event:', event);
       event.getDetails().then((game) => {
         if (event.isRunning()) {
-          Router.RunningApps.forEach((app: any) => {
-            if (app.appid == game.getGameId()) {
-              const appDet = appStore.GetAppOverviewByGameID(app.appid);
-              localStorage.setItem('icon-url-' + app.appid, appStore.GetIconURLForApp(appDet));
-            }
-          });
-
           Listeners.runningApplications.push({ id: game.getGameId(), name: game.getDisplayName() });
           BackendUtils.emitEvent(
             'launch_game',
@@ -61,18 +54,18 @@ export class Listeners {
         const response: Record<number, any> = {};
         for (let i = 0; i < data.length; i++) {
           const details = await appDetailsStore.RequestAppDetails(data[i]);
+          const overview = appStore.GetAppOverviewByGameID(data[i]);
           response[data[i]] = {
             appid: data[i],
             name: details.strDisplayName,
             launch_opts: details.strLaunchOptions,
-            is_steam_app: appStore.GetAppOverviewByGameID(data[i]).rt_steam_release_date > 0,
-            icon_hash: appStore.GetAppOverviewByGameID(data[i]).icon_hash,
+            is_steam_app: overview.rt_steam_release_date > 0,
+            icon_hash: overview.icon_hash,
             compat_tool: details.strCompatToolName,
             is_shortcut: details.strShortcutExe !== undefined
           };
         }
         BackendUtils.sendResponse(id, 'get_apps_details', response);
-        //SteamClient.Apps.SetAppLaunchOptions(990080, "EVK_ICD_FILENAMES=/usr/share/vulkan/icd.d/nvidia_icd.i686.json:/usr/share/vulkan/icd.d/nvidia_icd.x86_64.json %command%")
       }
     );
 
