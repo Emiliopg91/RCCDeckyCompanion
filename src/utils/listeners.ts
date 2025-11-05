@@ -1,3 +1,4 @@
+import { Router } from '@decky/ui';
 import {
   Backend,
   EventBus,
@@ -7,7 +8,6 @@ import {
   Logger
 } from 'decky-plugin-framework';
 
-import { Router } from '@decky/ui';
 import { BackendUtils } from './backend';
 
 export class Listeners {
@@ -28,7 +28,7 @@ export class Listeners {
           Router.RunningApps.forEach((app: any) => {
             if (app.appid == game.getGameId()) {
               const appDet = appStore.GetAppOverviewByGameID(app.appid);
-              localStorage.setItem("icon-url-" + app.appid, appStore.GetIconURLForApp(appDet))
+              localStorage.setItem('icon-url-' + app.appid, appStore.GetIconURLForApp(appDet));
             }
           });
 
@@ -66,6 +66,7 @@ export class Listeners {
             name: details.strDisplayName,
             launch_opts: details.strLaunchOptions,
             is_steam_app: appStore.GetAppOverviewByGameID(data[i]).rt_steam_release_date > 0,
+            icon_hash: appStore.GetAppOverviewByGameID(data[i]).icon_hash,
             compat_tool: details.strCompatToolName,
             is_shortcut: details.strShortcutExe !== undefined
           };
@@ -78,7 +79,7 @@ export class Listeners {
     Listeners.unsubscribeGetIcon = Backend.backend_handle(
       'get_icon',
       async (id: string, appId: number[]) => {
-        BackendUtils.sendResponse(id, 'get_icon', localStorage.getItem("icon-url-" + appId) ?? "");
+        BackendUtils.sendResponse(id, 'get_icon', localStorage.getItem('icon-url-' + appId) ?? '');
       }
     );
 
@@ -105,7 +106,7 @@ export class Listeners {
       Listeners.unsubscribeSetLaunchOptions();
     }
     if (Listeners.unsubscribeGetIcon) {
-      Listeners.unsubscribeGetIcon()
+      Listeners.unsubscribeGetIcon();
     }
   }
 }

@@ -32,13 +32,7 @@ class Builder:
         self.build_dist_dir = os.path.join(self.plugin_dir, "dist")
 
     def _check_container_runtime(self):
-        if shutil.which("podman"):
-            return "podman"
-        elif shutil.which("docker"):
-            return "docker"
-        else:
-            print("Error: Neither Docker nor Podman is installed.")
-            exit(1)
+        pass
 
     def _clean_directories(self):
         print("  Cleaning workspace")
