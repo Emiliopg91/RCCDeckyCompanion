@@ -11,6 +11,7 @@ from threading import Thread, Lock
 from dataclasses import dataclass, field, asdict
 import uuid
 
+
 @dataclass
 class MessageType:
     """Data class for YAML message"""
@@ -35,7 +36,7 @@ class MessageType:
 class UnixSocketServer(ABC):
     """Base class for WebSocket servers"""
 
-    SOCKET = os.path.join(decky.DECKY_PLUGIN_RUNTIME_DIR,"socket")
+    SOCKET = os.path.join(decky.DECKY_PLUGIN_RUNTIME_DIR, "socket")
     INVOCATION_TIMEOUT = 3
 
     def __init__(self):
@@ -61,7 +62,6 @@ class UnixSocketServer(ABC):
             target=self._message_sender,
         ).start()
 
-
     async def __start_server(self):
         if os.path.exists(UnixSocketServer.SOCKET):
             os.remove(UnixSocketServer.SOCKET)
@@ -83,7 +83,9 @@ class UnixSocketServer(ABC):
                 if self._client is None:
                     self._client = client_sock
                     decky.logger.info("[SERVER] Client connected")
-                    Thread(target=self._handle_client, args=(client_sock,), daemon=True).start()
+                    Thread(
+                        target=self._handle_client, args=(client_sock,), daemon=True
+                    ).start()
                 else:
                     decky.logger.warning("[SERVER] Extra connection rejected")
                     client_sock.close()
@@ -125,8 +127,10 @@ class UnixSocketServer(ABC):
                 decky.logger.info(f"[SERVER] Received: {msg}")
 
                 # Responder si es request
-                if msg.get("type") == "REQUEST":
-                    asyncio.run_coroutine_threadsafe(self._handle_message(data), self.loop)
+                if msg.type == "REQUEST":
+                    asyncio.run_coroutine_threadsafe(
+                        self._handle_message(data), self.loop
+                    )
         except Exception as e:
             decky.logger.error("[SERVER] Error:", e)
         finally:
@@ -145,8 +149,8 @@ class UnixSocketServer(ABC):
             decky.logger.error(f"Error on message parsing: {e}")
 
         if message is not None and message.type == "REQUEST":
-            if message.name=="ping":
-                response = MessageType("RESPONSE","ping",["pong"],None, message.id)
+            if message.name == "ping":
+                response = MessageType("RESPONSE", "ping", ["pong"], None, message.id)
                 self.send_message(response)
             else:
                 if message.name not in (
