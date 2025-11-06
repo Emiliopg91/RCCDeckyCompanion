@@ -80,15 +80,19 @@ class UnixSocketServer(ABC):
         while self.running:
             client_sock, _ = self._server.accept()
             with self.lock:
-                if self._client is None:
-                    self._client = client_sock
-                    decky.logger.info("[SERVER] Client connected")
-                    Thread(
-                        target=self._handle_client, args=(client_sock,), daemon=True
-                    ).start()
-                else:
-                    decky.logger.warning("[SERVER] Extra connection rejected")
-                    client_sock.close()
+                if self._client is not None:
+                    decky.logger.warning("[SERVER] Closing previous client connection")
+                    try:
+                        self._client.close()
+                    except Exception as e:
+                        decky.logger.error(f"[SERVER] Error closing old client: {e}")
+                    self._client = None
+
+                self._client = client_sock
+                decky.logger.info("[SERVER] Client connected")
+                Thread(
+                    target=self._handle_client, args=(client_sock,), daemon=True
+                ).start()
 
     def _message_sender(self):
         while True:
