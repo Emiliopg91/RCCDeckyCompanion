@@ -34,7 +34,7 @@ class MessageType:
 
 
 class UnixSocketServer(ABC):
-    """Base class for multi-client Unix socket servers"""
+    """Base class for WebSocket servers"""
 
     SOCKET = os.path.join(decky.DECKY_PLUGIN_RUNTIME_DIR, "socket")
     INVOCATION_TIMEOUT = 3
@@ -43,10 +43,11 @@ class UnixSocketServer(ABC):
         super().__init__()
 
         self._server = None
-        self._clients: set[socket.socket] = set()
-        self.lock = Lock()
+        self._client = None
 
         self._message_queue = queue.Queue()
+        self.lock = Lock()
+
         self.loop = asyncio.new_event_loop()
 
         Thread(
@@ -68,7 +69,7 @@ class UnixSocketServer(ABC):
         self._server = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
         self._server.bind(UnixSocketServer.SOCKET)
         os.chmod(UnixSocketServer.SOCKET, 0o666)
-        self._server.listen(5)
+        self._server.listen(1)
         self.running = True
 
         decky.logger.info(f"[SERVER] Listening on {UnixSocketServer.SOCKET}...")
@@ -77,18 +78,17 @@ class UnixSocketServer(ABC):
 
     def _accept_loop(self):
         while self.running:
-            try:
-                client_sock, _ = self._server.accept()
-                with self.lock:
-                    self._clients.add(client_sock)
-                decky.logger.info(
-                    f"[SERVER] Client connected ({len(self._clients)} total)"
-                )
-                Thread(
-                    target=self._handle_client, args=(client_sock,), daemon=True
-                ).start()
-            except Exception as e:
-                decky.logger.error(f"[SERVER] Accept error: {e}")
+            client_sock, _ = self._server.accept()
+            with self.lock:
+                if self._client is None:
+                    self._client = client_sock
+                    decky.logger.info("[SERVER] Client connected")
+                    Thread(
+                        target=self._handle_client, args=(client_sock,), daemon=True
+                    ).start()
+                else:
+                    decky.logger.warning("[SERVER] Extra connection rejected")
+                    client_sock.close()
 
     def _message_sender(self):
         while True:
@@ -96,33 +96,22 @@ class UnixSocketServer(ABC):
             message = self._message_queue.get(block=True)
             decky.logger.info(f"Preparing to send {message}")
 
-            data = message.to_yaml().encode("utf-8")
-            header = len(data).to_bytes(4, byteorder="big")
-
-            with self.lock:
-                disconnected = []
-                for client in list(self._clients):
-                    try:
-                        client.sendall(header + data)
-                    except Exception as e:
-                        decky.logger.error(f"Failed to send to client: {e}")
-                        disconnected.append(client)
-
-                # Remove disconnected clients
-                for c in disconnected:
-                    try:
-                        self._clients.remove(c)
-                        c.close()
-                    except Exception:
-                        pass
-
-            decky.logger.info(f"Sent to {len(self._clients)} active clients")
+            if self._server and self._client:
+                try:
+                    data = message.to_yaml().encode("utf-8")
+                    header = len(data).to_bytes(4, byteorder="big")
+                    self._client.sendall(header + data)
+                    decky.logger.info("Sent to client")
+                except Exception as e:
+                    decky.logger.error(f"Failed to send message to client: {e}")
+            else:
+                decky.logger.info("No server/client running, message not sent.")
 
     def _add_message_to_queue(self, message):
         self._message_queue.put(message)
 
     def send_message(self, message):
-        """Método público para enviar un mensaje a todos los clientes."""
+        """Método público para enviar un mensaje."""
         self._add_message_to_queue(message)
 
     def _handle_client(self, sock: socket.socket):
@@ -137,31 +126,29 @@ class UnixSocketServer(ABC):
                 msg = MessageType.from_yaml(data)
                 decky.logger.info(f"[SERVER] Received: {msg}")
 
+                # Responder si es request
                 if msg.type == "REQUEST":
                     asyncio.run_coroutine_threadsafe(
                         self._handle_message(data), self.loop
                     )
         except Exception as e:
-            decky.logger.error(f"[SERVER] Client handler error: {e}")
+            decky.logger.error("[SERVER] Error:", e)
         finally:
+            decky.logger.info("[SERVER] Client disconnected")
             with self.lock:
-                if sock in self._clients:
-                    self._clients.remove(sock)
+                self._client = None
             sock.close()
-            decky.logger.info(
-                f"[SERVER] Client disconnected ({len(self._clients)} total)"
-            )
 
     async def _handle_message(self, input_msg):
         decky.logger.info(f"Received message: '{input_msg}'")
-        message: MessageType | None = None
+        message: MessageType = None
         try:
             message = MessageType.from_yaml(input_msg)
         except Exception as e:
+            message = None
             decky.logger.error(f"Error on message parsing: {e}")
-            return
 
-        if message.type == "REQUEST":
+        if message is not None and message.type == "REQUEST":
             if message.name == "ping":
                 response = MessageType("RESPONSE", "ping", ["pong"], None, message.id)
                 self.send_message(response)
@@ -174,28 +161,28 @@ class UnixSocketServer(ABC):
                 ):
                     message.type = "RESPONSE"
                     message.error = f"No such method '{message.name}'"
-                    self.send_message(message)
+                    self.send_message(message)  # pylint: disable=E1101
                 else:
                     await decky.emit(message.name, message.id, *message.data)
 
     def emit(self, event: str, *data: any):
-        """Emit event to all clients"""
+        """Emit event with specified data"""
         msg = MessageType("EVENT", event, data)
-        self.send_message(msg)
+        self.send_message(msg)  # pylint: disable=E1101
 
     def send_response(self, msg_id: str, method: str, *data: any):
         msg = MessageType("RESPONSE", method, list(data), None, msg_id)
-        self.send_message(msg)
+        self.send_message(msg)  # pylint: disable=E1101
 
     def shutdown(self):
         self.running = False
         with self.lock:
-            for client in list(self._clients):
+            if self._client is not None:
                 try:
-                    client.close()
+                    self._client.close()
                 except Exception as e:
                     decky.logger.error(f"Error closing client: {e}")
-            self._clients.clear()
+                self._client = None
 
             if self._server is not None:
                 try:
