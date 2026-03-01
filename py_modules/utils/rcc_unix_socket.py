@@ -10,6 +10,7 @@ from abc import ABC
 from threading import Thread, Lock
 from dataclasses import dataclass, field, asdict
 import uuid
+import pwd
 
 
 @dataclass
@@ -36,7 +37,8 @@ class MessageType:
 class UnixSocketServer(ABC):
     """Base class for WebSocket servers"""
 
-    SOCKET = os.path.join(decky.DECKY_PLUGIN_RUNTIME_DIR, "socket")
+    user_info = pwd.getpwnam(decky.DECKY_USER)
+    SOCKET = f"/run/user/{user_info.pw_uid}/RCCDeckyCompanion.sock"
     INVOCATION_TIMEOUT = 3
 
     def __init__(self):
